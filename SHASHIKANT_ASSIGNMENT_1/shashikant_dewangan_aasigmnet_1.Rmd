@@ -1,0 +1,142 @@
+---
+title: "SHASHIKANT DEWANGAN asignment1"
+output:
+  html_document: default
+  pdf_document: default
+---
+1. For top ten parties compute the following metrics for the year 2009
+ a) Total number of contestants
+```{r}
+library(dplyr)
+parliament<- read.csv("file:///C:/Users/Administrator/Desktop/Data Visuvalizaion/datasets/parliament.csv")
+top10_cont <- parliament %>%
+  filter(YEAR==2009) %>% 
+  group_by(PARTY) %>% 
+  summarise(sum_of_contesntants=n()) %>% 
+  arrange(-sum_of_contesntants)%>%
+  head(10)
+print(top10_cont)
+```
+#1-b) Total of number of winning seats
+
+```{r}
+total_win_seat=parliament %>%
+  filter(YEAR==2009,Position==1) %>% 
+  group_by(PARTY) %>%
+  summarise(win_seats=n()) %>% 
+  arrange(-win_seats) %>%
+  head(10)
+print(total_win_seat)
+```
+#1-c) Avg. %of votes
+```{r}
+sum_total=parliament %>% 
+  filter(YEAR==2009) %>% 
+  select(PARTY,VOTES) %>%
+  summarise(sum_vot=sum(VOTES))
+
+party_wise_votes=parliament %>%
+  filter(YEAR==2009) %>% 
+  group_by(PARTY) %>% 
+  
+  summarise(sum_part=sum(VOTES))
+
+
+parties_year_avg <- merge(party_wise_votes,sum_total)
+
+parties_year_avg <- parties_year_avg %>% 
+  mutate(perc_avg=sum_part/sum_vot*100) %>% 
+  arrange(-perc_avg) %>% 
+  head(10)
+print(parties_year_avg)
+```
+1-d) Identify top ten candidates with highest %margin of votes for the year 2009
+```{r}
+
+
+top_candidates <- parliament %>%
+  group_by(NAME) %>%
+  filter(Position == 1,
+         YEAR == 2009) %>%
+  summarise(total_votes = sum(VOTES)) %>%
+  arrange(desc(total_votes)) %>%
+  top_n(10)
+
+second_last_candidates <- parliament %>%
+  group_by(NAME) %>%
+  filter(Position == 2,
+         YEAR == 2009) %>%
+  summarise(total_votes = sum(VOTES)) %>%
+  arrange(desc(total_votes)) %>%
+  top_n(10)
+
+margin = (top_candidates$total_votes - second_last_candidates$total_votes) /
+  second_last_candidates$total_votes
+print(margin *100)
+
+
+```
+2. Identify year wise percentage of male and female candidates?
+```{r}
+Male_numbers=parliament %>% filter(SEX=='M') %>% group_by(YEAR) %>% summarise(male=n())
+
+Female_numbers=parliament %>% filter(SEX=='F') %>% group_by(YEAR) %>% summarise(female=n())
+total_candidate1 <- parliament %>% group_by(YEAR) %>% summarise(total=n())
+male_percentage_merge <- merge(Male_numbers,total_candidate1)
+
+MALE_PERCENTAGE=male_percentage_merge %>% mutate(male_per=male/total*100)
+female_percntage_merge=merge(Female_numbers,total_candidate1)
+
+FEMALE_PERCENTAGE=female_percntage_merge %>% mutate(female_per=female/total*100)
+
+PERCENTAGE=merge(MALE_PERCENTAGE,FEMALE_PERCENTAGE)
+print(PERCENTAGE)
+
+```
+3. Create a new column by binning the Runs column using the following ranges and plot the frequency count of ranges
+0-25, 26-50, 51-75, 76-100, 100+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+setwd("C:/Users/Administrator/Desktop/Data Visuvalizaion/datasets")
+odi <- read.csv("file:///C:/Users/Administrator/Desktop/Data Visuvalizaion/datasets/odi-batting.csv")
+
+odi = odi %>% mutate(Run_bin=case_when(Runs %in% c(0:25)~c("0-25"), Runs %in% c(26:50)~c("26-50"), Runs %in% c(51:75) ~c("51-75"), Runs %in% c(76:100)~c("76-100"),Runs>100~c("100+")))
+
+Bins_Table = odi %>% group_by(Run_bin) %>% summarise(Freq=n())
+print(Bins_Table)
+#plotting
+ggplot(na.omit(Bins_Table),aes(x=reorder(Run_bin,-Freq),y=Freq,fill=Run_bin))+geom_bar(stat='identity')+xlab("Run Range")+ylab("Frequency Count")+scale_fill_discrete(name="RunSlots")
+
+```
+4. Consider the top ten players by total runs and compute and visualize the number of centuries across years (use facet_grid or facet_wrap)
+```{r}
+odi$MatchDate <- as.Date(odi$MatchDate,"%m-%d-%Y")
+odi$Year <- format(odi$MatchDate,"%Y")
+top_player_by_run <- odi %>% group_by(Player) %>%
+  summarise(top_run=sum(Runs)) %>% 
+  arrange(-top_run) %>%
+  head(10)
+
+top_player_by_run <- rbind(odi$Year,top_player_by_run)
+centry_year_wise = odi %>%
+  group_by(Player, Year) %>%
+  filter(Player %in% top_player_by_run$Player) %>%
+  summarise(cc = sum(Runs >= 100)) 
+print(top_player_by_run)
+
+g <- ggplot(data=centry_year_wise,aes(x=Year,y=cc,color=Player))+
+  geom_point()+
+  facet_grid(~Player)
+ggplotly(g)
+```
+5. Create a scatter plot with the following details X axis contains number of retweets  Y axis contains number of likes Color represents device from which it was tweeted
+```{r}
+tweet <- read.csv("file:///C:/Users/Administrator/Desktop/Data Visuvalizaion/datasets/narendramodi_tweets.csv")
+library(ggplot2)
+ggplot(data=tweet,aes(x=retweets_count,y=favorite_count,color=source))+geom_point(stat = 'identity')
+```
+
+
