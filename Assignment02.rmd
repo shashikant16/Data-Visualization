@@ -1,0 +1,121 @@
+---
+title: "IOT TEMPERATURE DATA"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+```{r}
+iot_data<-read.csv("file:///C:/Users/Administrator/Desktop/Data Visuvalizaion/assignment/Ass-2/data_iot_temperature.csv",header = TRUE)
+```
+
+Row{}
+-------------------------------------------------
+### MAXIMUM TEMPERATURE
+```{r}
+valueBox(max(iot_data$temperature),color="orange")
+```
+
+### AVERAGE TEMPERATURE
+```{r}
+avg_temp=as.double(mean(iot_data$temperature))
+valueBox(27.04,color="black")
+```
+
+### MINIMUM TEMPERATURE
+```{r}
+valueBox(min(iot_data$temperature),color="green")
+```
+
+
+Row {data-width=350}
+-----------------------------------------------------------------------
+###DAY-WISE AVERAGE TEMPERATURE
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(plotly)#install.packages("lubridate")
+library(lubridate)
+
+# Question 1 -Day wise compute the average temperature and visualize them in a line chart
+iot_data$Date<-as.Date(iot_data$date)
+
+#summary(iot_data)
+iot_data$Hour <- format(as.POSIXct(iot_data$date) ,format = "%H:%M:%S") 
+avgtemp_daywise<-iot_data%>%
+  group_by(Date)%>%
+  summarise(avg_temp = mean(temperature))
+
+#AVERAGE TEMPERATURE OF EACH DAY
+g1<-ggplot(avgtemp_daywise,aes(x=Date,y=avg_temp))+ 
+  geom_line(stat = "identity",group = 1) + 
+  xlab("DAY OF THE MONTH")+ 
+  ylab("AVERAGE TEMPERATURE")
+ggplotly(g1)
+```
+
+
+###DAY-WISE - HOURLY AVERAGE TEMPERATURE
+```{r}
+#Create a new column for day of the month and hour of the day. Plot a tile map where x axis is day of the month, y axis is hour of the day. The colour should represent average temperature
+day_hour<-iot_data%>%
+  group_by(Date,Hour)%>%
+  summarise(avg_temp = mean(temperature))
+
+g2<-ggplot(day_hour,aes(x =Date,Hour, fill = as.factor(avg_temp))) + 
+  geom_tile() + 
+  xlab("DAY OF MONTH")+
+  ylab(" ")
+
+ggplotly(g2)
+```
+
+
+
+Row {data-width=650}
+-----------------------------------------------------------------------
+###TEMPERATURE OCCURENCES OF ABNORMAL TEMPERATURE
+
+```{r}
+#For each day compute how many times the temperature has exceeded the lower limit and upper limit separately. Visualize the same using stack bar
+
+count_lowlimit<-iot_data%>%
+  group_by(Date)%>%
+  filter(temperature<25)%>%
+  summarise(temp_less_than_25 =n())
+
+count_upperlimit<-iot_data%>%
+  group_by(Date)%>%
+  filter(temperature>30)%>%
+  summarise(temp_greater_than_30 =n())
+
+freq_count<-merge(count_lowlimit,count_upperlimit, by = "Date")
+
+new_freq<-melt(freq_count, id.vars = "Date", measure.vars = c("temp_less_than_25", "temp_greater_than_30"))
+
+g<-ggplot(new_freq,aes(x= Date,y = value,fill =variable))+
+  geom_bar(stat ="identity", position = "stack") 
+g
+```
+
+
+###DAY-WISE DISTRIBUTIONS OF TEMPERATURE 
+
+```{r}
+#Day wise visualize the distribution of temperature using one box plot per day
+g3<-ggplot(day_hour,aes(Date,avg_temp)) + 
+  geom_boxplot(aes(group = as.factor(Date),fill = as.factor(Date)))+ 
+  xlab("DAY OF THE MONTH") + 
+  ylab("TEMPERATURE DISTRIBUTIONS") + 
+  theme(legend.position = "none")
+ggplotly(g3)
+```
+
+
